@@ -1,0 +1,7 @@
+node_modules
+dist
+*.log
+.shots
+public/music/*.mp3
+public/music/*.m4a
+public/music/*.ogg
