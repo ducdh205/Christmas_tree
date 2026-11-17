@@ -24,6 +24,26 @@ npm run preview   # serve the build
 - **Music** (top right) plays a synthesised music-box "Jingle Bells". It's public domain and generated with WebAudio, so no audio files are loaded. The lights and star pulse with the notes.
 - Respects `prefers-reduced-motion` (shorter intro, slower spin and snow).
 
+## The gift for dilahn
+
+Everything personal is in `src/gifts/content.ts`: the name and the portrait caption.
+
+The four boxes under the tree, from left to right:
+
+| Box | Opens |
+|---|---|
+| small blue | an ASCII portrait made from `public/gift/dilahn.png` (tap it to see the real photo) |
+| big red | an aurora: curtains of green, blue and pink light sway across the sky for about 15 s |
+| red | a meteor shower: around 30 shooting stars, some of which burn out in sparkles |
+| small gold | fireworks whose last burst spells the name |
+
+The page opens on a "Gửi dilahn · chạm để mở quà" screen. That first tap also starts the music.
+Which boxes have been opened is remembered in the browser.
+
+The photo in `public/gift/` is **git-ignored on purpose** because it's a picture of a real person.
+If you deploy from the repo and want the portrait on the live site, remove the `public/gift/*` lines
+from `.gitignore` (and keep the repo private if you prefer).
+
 ## How it works
 
 - `src/grid.ts`: a character frame buffer (glyph, colour, opacity, glow per cell).

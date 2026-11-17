@@ -88,8 +88,24 @@ const GIFTS: Gift[] = [
   { w: 8, h: 3, box: C.gold, ribbon: C.deepRed, side: 1, gap: 14 },
 ];
 
+/** What each gift box holds, in GIFTS order. */
+export const GIFT_KINDS = ['aurora', 'portrait', 'meteors', 'fireworks'] as const;
+export type GiftKind = (typeof GIFT_KINDS)[number];
+
+/** Gifts become clickable this long after the star ignites. */
+export const GIFTS_READY = TIMELINE.ignite + 1.6;
+
+interface GiftState {
+  /** time the box was opened (scene clock), -Infinity if it was opened in an earlier visit, NaN if never */
+  opened: number;
+  hover: boolean;
+  /** hit box in CSS px, updated every frame */
+  rect: { x: number; y: number; w: number; h: number } | null;
+}
+
 export class Tree {
   rot = 0;
+  readonly gifts: GiftState[] = GIFTS.map(() => ({ opened: NaN, hover: false, rect: null }));
   /** 0..1 pulse from the music, decays on its own */
   beat = 0;
   /** where the building comet's head is (CSS px), or null when it isn't flying */
@@ -174,10 +190,10 @@ export class Tree {
   draw(grid: Grid, L: Layout, time: number, intro: Intro) {
     this.drawTrunk(grid, L, intro);
     this.drawFoliage(grid, L, time, intro);
-    this.drawGifts(grid, L, intro);
     this.drawGarland(grid, L, time, intro);
     this.drawOrnaments(grid, L, time, intro);
     this.drawLights(grid, L, time, intro);
+    this.drawGifts(grid, L, time, intro);
     this.drawComet(grid, L, intro);
     this.drawStar(grid, L, time, intro);
     this.drawShockwave(grid, L, intro);
@@ -467,35 +483,89 @@ export class Tree {
     }
   }
 
-  private drawGifts(grid: Grid, L: Layout, intro: Intro) {
+  /** Index of the gift under (x, y) in CSS px, or -1. */
+  giftAt(x: number, y: number) {
+    const pad = 6;
+    return this.gifts.findIndex(
+      (g) => g.rect && x >= g.rect.x - pad && x <= g.rect.x + g.rect.w + pad && y >= g.rect.y - pad && y <= g.rect.y + g.rect.h + pad,
+    );
+  }
+
+  private drawGifts(grid: Grid, L: Layout, time: number, intro: Intro) {
     const tc = Math.floor(L.cx / L.cw);
     const tw = Math.ceil(L.trunkW / L.cw);
+    const ready = intro.t > GIFTS_READY;
     GIFTS.forEach((g, gi) => {
+      const st = this.gifts[gi];
       const appear = clamp((intro.build - 0.04 - gi * 0.03) / 0.06);
-      if (appear <= 0) return;
-      const left = g.side < 0 ? tc - tw - g.gap - g.w : tc + tw + 1 + g.gap;
+      if (appear <= 0) {
+        st.rect = null;
+        return;
+      }
+      const since = time - st.opened; // NaN if never opened, Infinity if opened on an earlier visit
+      const isOpen = since >= 0.35;
+      // a little shake before the lid pops
+      const shake = since >= 0 && since < 0.35 ? Math.round(Math.sin(since * 70)) : 0;
+      const left = (g.side < 0 ? tc - tw - g.gap - g.w : tc + tw + 1 + g.gap) + shake;
       const bottom = Math.floor(groundSurfaceY(L, (left + g.w / 2) * L.cw) / L.ch);
       const top = bottom - g.h + 1;
       const mid = Math.floor(g.w / 2);
       const band = Math.floor(g.h / 2);
+      st.rect = { x: left * L.cw, y: (top - 1) * L.ch, w: g.w * L.cw, h: (g.h + 1) * L.ch };
+
+      // unopened boxes breathe to invite a tap; hovering lights them up
+      const invite = ready && !(since >= 0) ? 0.5 + 0.5 * Math.sin(time * 2.4 + gi * 1.7) : 0;
+      const hot = st.hover && ready ? 1 : 0;
+      const ribbonGlow = 0.45 + invite * 0.5 + hot * 0.6;
+      const boxAlpha = (a: number) => Math.min(1, a + hot * 0.25) * appear;
+
+      // lid row (row 0) + bow: lifts off and fades when opened
+      const lift = isOpen ? Math.min(since - 0.35, 0.9) : 0;
+      const lidUp = Math.floor(lift * 9);
+      const lidA = isOpen ? clamp(1 - (since - 0.35) / 0.9) : 1;
+
       for (let r = 0; r < g.h; r++) {
+        const y = r === 0 ? top - lidUp : top + r;
+        const rowA = r === 0 ? lidA : 1;
+        if (rowA <= 0) continue;
         for (let i = 0; i < g.w; i++) {
           const vert = i === mid;
           const horiz = r === band;
           const shade = 0.62 + 0.38 * (1 - i / g.w); // lit from the left
           if (vert || horiz) {
-            grid.set(left + i, top + r, vert && horiz ? G.plus : vert ? G.pipe : G.eq, g.ribbon, appear, 0.45);
+            grid.set(left + i, y, vert && horiz ? G.plus : vert ? G.pipe : G.eq, g.ribbon, boxAlpha(1) * rowA, ribbonGlow);
           } else if (i === 0 || i === g.w - 1) {
-            grid.set(left + i, top + r, G.pipe, g.box, shade * appear, 0.1);
+            grid.set(left + i, y, G.pipe, g.box, boxAlpha(shade) * rowA, 0.1 + hot * 0.2);
           } else {
-            grid.set(left + i, top + r, r === 0 ? G.eq : G.hash, g.box, shade * appear, 0.12);
+            grid.set(left + i, y, r === 0 ? G.eq : G.hash, g.box, boxAlpha(shade) * rowA, 0.12 + hot * 0.2);
           }
         }
       }
-      // the bow
-      grid.set(left + mid - 1, top - 1, G.back, g.ribbon, appear, 0.6);
-      grid.set(left + mid, top - 1, G.o, g.ribbon, appear, 0.6);
-      grid.set(left + mid + 1, top - 1, G.slash, g.ribbon, appear, 0.6);
+      if (lidA > 0) {
+        const by = top - 1 - lidUp;
+        grid.set(left + mid - 1, by, G.back, g.ribbon, appear * lidA, ribbonGlow + 0.15);
+        grid.set(left + mid, by, G.o, g.ribbon, appear * lidA, ribbonGlow + 0.15);
+        grid.set(left + mid + 1, by, G.slash, g.ribbon, appear * lidA, ribbonGlow + 0.15);
+      }
+      // an occasional glint above an unopened bow
+      if (ready && !(since >= 0) && Math.sin(time * 1.3 + gi * 2.1) > 0.9) {
+        grid.set(left + mid, top - 2, G.star, C.goldPale, 0.9, 1.2);
+      }
+
+      if (isOpen) {
+        // light spilling out of the open box, and motes drifting up
+        const fresh = Number.isFinite(since) ? Math.exp(-(since - 0.35) * 1.5) : 0;
+        for (let i = 1; i < g.w - 1; i++) {
+          const h = hash2(left + i, Math.floor(time * 6));
+          grid.set(left + i, top, h > 0.6 ? G.star : h > 0.3 ? G.plus : G.mdot, h > 0.5 ? C.goldPale : C.gold, 0.6 + 0.4 * h, 0.8 + fresh);
+        }
+        for (let k = 0; k < 4; k++) {
+          const ph = (time * 0.45 + k / 4 + gi * 0.13) % 1;
+          const mx = left + 1 + Math.floor(hash2(gi * 7 + k, Math.floor(time * 0.45 + k / 4 + gi * 0.13)) * (g.w - 2));
+          grid.set(mx, top - 1 - Math.floor(ph * 6), G.mdot, C.goldPale, (1 - ph) * 0.8, 1);
+        }
+      }
     });
   }
+
 }
