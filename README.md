@@ -40,9 +40,7 @@ The four boxes under the tree, from left to right:
 The page opens on a "Gửi dilahn · chạm để mở quà" screen. That first tap also starts the music.
 Which boxes have been opened is remembered in the browser.
 
-The photo in `public/gift/` is **git-ignored on purpose** because it's a picture of a real person.
-If you deploy from the repo and want the portrait on the live site, remove the `public/gift/*` lines
-from `.gitignore` (and keep the repo private if you prefer).
+The portrait photo lives in `public/gift/dilahn.png` and is committed with the repo, so keep the repo private if you prefer.
 
 ## How it works
 

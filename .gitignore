@@ -11,8 +11,3 @@ public/music/*.oga
 public/music/*.wav
 public/music/*.flac
 public/music/*.webm
-# the portrait photo is personal: kept out of git by default (see README)
-public/gift/*.png
-public/gift/*.jpg
-public/gift/*.jpeg
-public/gift/*.webp
