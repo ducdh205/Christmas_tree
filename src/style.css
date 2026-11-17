@@ -321,6 +321,79 @@ canvas {
   }
 }
 
+/* ---------- next track + now playing ---------- */
+.next {
+  position: absolute;
+  top: calc(max(18px, env(safe-area-inset-top)) + 46px);
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(233, 216, 180, 0.16);
+  border-radius: 50%;
+  background: rgba(10, 14, 24, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--ink-soft);
+  font: 400 20px/1 var(--serif);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.next span {
+  display: inline-block;
+  transform: translate(1px, -1px);
+}
+
+.show-ui.music-on .next {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.next:hover,
+.next:focus-visible {
+  color: var(--gold);
+  border-color: rgba(243, 201, 105, 0.45);
+  outline: none;
+}
+
+.now-playing {
+  position: absolute;
+  top: calc(max(18px, env(safe-area-inset-top)) + 90px);
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 3;
+  max-width: min(70vw, 360px);
+  margin: 0;
+  text-align: right;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 1.2s ease,
+    transform 1.2s ease;
+}
+
+.now-playing.show {
+  opacity: 1;
+  transform: none;
+}
+
 /* used by ?t=<seconds> (jump into the intro for screenshots) */
 .instant,
 .instant * {

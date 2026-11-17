@@ -21,7 +21,7 @@ npm run preview   # serve the build
 
 - **Drag** to spin the tree (it keeps its momentum, then eases back to a slow turn).
 - **Tap / click** anywhere for a burst of golden sparks.
-- **Music** (top right) plays a synthesised music-box "Jingle Bells". It's public domain and generated with WebAudio, so no audio files are loaded. The lights and star pulse with the notes.
+- **Music** (top right) plays every audio file in `public/music/` as a looping playlist. The **›** button skips to the next song, the song title fades in when it starts, and the lights and star pulse to the bass. With no files there, a smooth synthesised medley of public-domain carols plays instead (Jingle Bells, We Wish You a Merry Christmas, Silent Night). See `public/music/README.md`.
 - Respects `prefers-reduced-motion` (shorter intro, slower spin and snow).
 
 ## The gift for dilahn

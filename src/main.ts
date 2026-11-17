@@ -5,7 +5,8 @@ import './style.css';
 import './gifts/gifts.css';
 
 import { MusicBox } from './audio';
-import { TrackPlayer } from './track';
+import { PlaylistPlayer } from './track';
+import PLAYLIST from 'virtual:playlist';
 import { Grid } from './grid';
 import { Layout, computeLayout } from './layout';
 import { Renderer } from './renderer';
@@ -45,17 +46,26 @@ const meteors = new Meteors();
 meteors.onBurnout = (x, y) => sparkles.burst(x, y, L.scale, 12, 0.5);
 const modal = new GiftModal();
 title.start = TIMELINE.ignite + 1.0;
-/** Drop your own copy of the song here; without it the synthesised music box plays. */
-const TRACK_SRC = `${import.meta.env.BASE_URL}music/christmas-tree.mp3`;
-let music: MusicBox | TrackPlayer = new MusicBox();
+/**
+ * Every audio file in public/music/ plays as a looping playlist; with none,
+ * the synthesised carol medley plays instead.
+ */
+const music: MusicBox | PlaylistPlayer = PLAYLIST.length
+  ? new PlaylistPlayer(PLAYLIST.map((f) => `${import.meta.env.BASE_URL}music/${encodeURIComponent(f)}`))
+  : new MusicBox();
 music.onNote = () => (tree.beat = 1);
 
-async function pickMusic() {
-  if (!(await TrackPlayer.available(TRACK_SRC))) return;
-  music = new TrackPlayer(TRACK_SRC);
-  music.onNote = () => (tree.beat = 1);
-  soundBtn.title = 'Christmas Tree — V';
-}
+const nextBtn = $<HTMLButtonElement>('next');
+const nowPlaying = $('now-playing');
+let nowTimer = 0;
+music.onTrack = (name) => {
+  nowPlaying.textContent = `♪  ${name}`;
+  soundBtn.title = name;
+  nowPlaying.classList.add('show');
+  window.clearTimeout(nowTimer);
+  nowTimer = window.setTimeout(() => nowPlaying.classList.remove('show'), 4500);
+};
+nextBtn.addEventListener('click', () => music.next());
 
 let L: Layout;
 const params = new URLSearchParams(location.search);
@@ -213,12 +223,14 @@ soundBtn.addEventListener('click', async () => {
     console.warn('music could not start', err);
   }
   soundBtn.setAttribute('aria-pressed', String(on));
+  stage.classList.toggle('music-on', on);
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && music.playing) {
     music.stop();
     soundBtn.setAttribute('aria-pressed', 'false');
+    stage.classList.remove('music-on');
   }
 });
 
@@ -275,6 +287,7 @@ async function startMusic() {
   try {
     const on = music.playing || (await music.toggle());
     soundBtn.setAttribute('aria-pressed', String(on));
+    stage.classList.toggle('music-on', on);
   } catch (err) {
     console.warn('music could not start', err);
   }
@@ -337,14 +350,13 @@ async function boot() {
   }
   fillCaption();
   loadOpened();
-  const musicReady = pickMusic();
   resize();
   if (started) {
     gate.remove();
     scheduleCaptions();
   } else {
     gate.querySelector<HTMLElement>('.gate-hint')!.textContent = 'chạm để mở quà';
-    musicReady.finally(() => gate.classList.add('ready'));
+    gate.classList.add('ready');
   }
   requestAnimationFrame((t) => {
     last = t;

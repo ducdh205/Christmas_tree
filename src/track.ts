@@ -1,11 +1,15 @@
 /**
- * Plays an audio file you provide (e.g. public/music/christmas-tree.mp3) and
- * listens to its low end, so the lights and star can pulse with the real beat.
+ * Plays the audio files you put in public/music/ one after another (looping the
+ * whole list) and listens to their low end, so the lights and star pulse with
+ * the real beat.
  */
-export class TrackPlayer {
+export class PlaylistPlayer {
   playing = false;
   onNote: (() => void) | null = null;
-  private audio: HTMLAudioElement;
+  /** called with a readable title whenever a track starts */
+  onTrack: ((title: string) => void) | null = null;
+  private audio = new Audio();
+  private index = 0;
   private ctx: AudioContext | null = null;
   private gain!: GainNode;
   private analyser!: AnalyserNode;
@@ -13,21 +17,33 @@ export class TrackPlayer {
   private avg = 0;
   private cooldown = 0;
   private raf = 0;
+  private failures = 0;
 
-  constructor(readonly src: string) {
-    this.audio = new Audio(src);
-    this.audio.loop = true;
+  constructor(private readonly srcs: string[]) {
     this.audio.preload = 'auto';
+    this.audio.src = srcs[0];
+    this.audio.addEventListener('ended', () => this.next());
+    this.audio.addEventListener('error', () => {
+      // skip files the browser can't play, but don't spin forever if none work
+      if (++this.failures < this.srcs.length) this.next();
+    });
+    this.audio.addEventListener('playing', () => {
+      this.failures = 0;
+      this.onTrack?.(this.title);
+    });
   }
 
-  /** True if the file exists and the server actually serves audio (not the SPA fallback page). */
-  static async available(src: string) {
-    try {
-      const res = await fetch(src, { method: 'HEAD' });
-      return res.ok && (res.headers.get('content-type') ?? '').startsWith('audio');
-    } catch {
-      return false;
-    }
+  get count() {
+    return this.srcs.length;
+  }
+
+  get title() {
+    const file = decodeURIComponent(this.srcs[this.index].split('/').pop() ?? '');
+    return file
+      .replace(/\.[^.]+$/, '')
+      .replace(/^\d+\s*[-_.]\s*/, '') // "01 - Last Christmas" -> "Last Christmas"
+      .replace(/[_]+/g, ' ')
+      .trim();
   }
 
   private init() {
@@ -56,8 +72,7 @@ export class TrackPlayer {
     await ctx.resume();
     await this.audio.play();
     this.playing = true;
-    this.gain.gain.cancelScheduledValues(ctx.currentTime);
-    this.gain.gain.setTargetAtTime(0.9, ctx.currentTime, 0.6);
+    this.fade(0.9, 0.6);
     cancelAnimationFrame(this.raf);
     this.listen();
   }
@@ -65,11 +80,35 @@ export class TrackPlayer {
   stop() {
     if (!this.ctx) return;
     this.playing = false;
-    const ctx = this.ctx;
-    this.gain.gain.cancelScheduledValues(ctx.currentTime);
-    this.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.35);
+    this.fade(0, 0.35);
     cancelAnimationFrame(this.raf);
     window.setTimeout(() => !this.playing && this.audio.pause(), 1500);
+  }
+
+  /** Skip to the next track (with a short fade), wrapping around. */
+  next() {
+    this.index = (this.index + 1) % this.srcs.length;
+    const swap = () => {
+      this.audio.src = this.srcs[this.index];
+      if (this.playing) {
+        this.audio.play().catch(() => {});
+        this.fade(0.9, 0.4);
+      }
+    };
+    if (this.playing && this.ctx && !this.audio.ended) {
+      this.fade(0, 0.12);
+      window.setTimeout(swap, 400);
+    } else {
+      swap();
+    }
+  }
+
+  private fade(to: number, tc: number) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now);
+    this.gain.gain.setTargetAtTime(to, now, tc);
   }
 
   /** Simple onset detector on the bass band: fire onNote when energy jumps above its running average. */

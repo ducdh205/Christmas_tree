@@ -1,8 +1,12 @@
-Put your own copy of the song here as `christmas-tree.mp3`
-(e.g. "Christmas Tree" by V, from a copy you bought or own).
+Drop your Christmas songs here: any .mp3, .m4a, .aac, .ogg, .opus, .wav, .flac or .webm file.
+(Bỏ các bài nhạc Giáng sinh của bạn vào đây.)
 
-The page picks it up automatically and the lights pulse to its beat.
-Without the file, a synthesised music-box "Jingle Bells" plays instead.
+- Every file plays as a playlist, sorted by file name, looping forever.
+  Prefix files with numbers to set the order: `01 - Last Christmas.mp3`, `02 - Christmas Tree.mp3`, ...
+- The title shown on screen comes from the file name, with the number prefix and extension removed.
+- With `npm run dev` running, adding or removing a file reloads the page by itself.
+- The lights and the star pulse with each song's bass.
+- With no files here, a synthesised medley plays instead
+  (Jingle Bells, We Wish You a Merry Christmas, Silent Night).
 
-`*.mp3` / `*.m4a` / `*.ogg` files in this folder are git-ignored on purpose:
-the song is copyrighted, so don't commit it to a public repository.
+Audio files in this folder are git-ignored, so your songs are never pushed to GitHub.

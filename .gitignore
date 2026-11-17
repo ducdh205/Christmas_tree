@@ -5,6 +5,12 @@ dist
 public/music/*.mp3
 public/music/*.m4a
 public/music/*.ogg
+public/music/*.aac
+public/music/*.opus
+public/music/*.oga
+public/music/*.wav
+public/music/*.flac
+public/music/*.webm
 # the portrait photo is personal: kept out of git by default (see README)
 public/gift/*.png
 public/gift/*.jpg
